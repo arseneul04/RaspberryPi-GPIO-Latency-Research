@@ -1,0 +1,178 @@
+
+REPORT
+
+Project Objective
+The goal of this project was to build and test a minimal bare-metal Raspberry Pi operating system that can interact with external GPIO signals in real time. The larger research question is how much operating system machinery is needed for embedded and mission-critical systems that interact with the physical world.
+Instead of using a full general-purpose operating system on the receiver side, this project tested several bare-metal designs and compared their response latency against a Raspberry Pi OS receiver.
+1.	Initial Bare-Metal OS Setup
+A simple bare-metal operating system was implemented for the Raspberry Pi. The OS was written in AArch64 assembly and built using the `make` command, which generated the custom kernel file:	
+kernel8.img
+The generated kernel8.img replaced the default kernel file on the Raspberry Pi SD card boot partition. The config.txt file was updated with:
+[all]
+kernel=kernel8.img
+The bare-metal OS controlled GPIO18, which is physical pin 12 on the Raspberry Pi. The LED circuit was connected as:
+GPIO18 / pin 12 -> 220-ohm resistor -> LED -> GND
+When the Raspberry Pi was powered on, the LED blinked. This confirmed that the firmware loaded the custom kernel successfully and that the bare-metal OS was able to control GPIO18 directly.
+2.	One-Way GPIO Communication
+The Raspberry Pi running Raspberry Pi OS was used as the stimulus board, while the bare-metal Raspberry Pi was used as the receiver. The Raspberry Pi OS board sent a HIGH/LOW GPIO signal to the bare-metal Pi.
+
+Connections used:
+Raspberry Pi OS GPIO22 / pin 15 -> resistor -> Bare-metal Pi GPIO27 / pin 13
+Raspberry Pi OS GND / pin 6     -> Bare-metal Pi GND / pin 6
+Bare-metal Pi GPIO18 / pin 12   -> resistor -> LED -> GND
+
+
+GPIO22 was used as the output signal from the Raspberry Pi OS board. GPIO27 was used as the input pin on the bare-metal Pi, and GPIO18 was used to control the LED.
+A Python script called send_signal.py was used on the Raspberry Pi OS board to send HIGH and LOW signals. The LED blinked at the same rate as the Python script, confirming successful one-way GPIO communication between the two Raspberry Pi boards.
+
+
+
+
+
+3.	Two-Way GPIO Communication
+Two-way GPIO communication was then implemented. The Raspberry Pi OS board sent a signal from GPIO22 to GPIO27 on the bare-metal Pi. The bare-metal Pi used that input to control the LED on GPIO18 and then sent a response signal back using GPIO23.
+Connections used:
+Raspberry Pi OS GPIO22 / pin 15 -> resistor -> Bare-metal Pi GPIO27 / pin 13
+Raspberry Pi OS GND / pin 6     -> Bare-metal Pi GND / pin 6
+Bare-metal Pi GPIO18 / pin 12   -> resistor -> LED -> GND
+Bare-metal Pi GPIO23 / pin 16   -> resistor -> Raspberry Pi OS GPIO24 / pin 18
+The LED blinked at the same rate as the Python script, and the Raspberry Pi OS board received the response signal on GPIO24. This confirmed successful two-way GPIO communication.
+4.	Replacing Polling With GPIO Interrupts
+The next step was to replace polling with GPIO interrupts on the Raspberry Pi 4 bare-metal OS.
+Previously, the bare-metal Pi continuously checked GPIO27 in a loop. This worked, but it meant the CPU was always polling the input pin. In the interrupt version, GPIO27 was configured to generate interrupts on rising and falling edges.
+Connections used:
+Raspberry Pi OS GPIO22 / pin 15 -> 560-ohm resistor -> Bare-metal Pi GPIO27 / pin 13
+Raspberry Pi OS GND / pin 6     -> Bare-metal Pi GND / pin 6
+Bare-metal Pi GPIO18 / pin 12   -> resistor -> LED -> GND
+The Raspberry Pi OS board sent HIGH and LOW signals from GPIO22. The bare-metal Pi received these signals on GPIO27. When GPIO27 changed state, the interrupt handler updated GPIO18, turning the LED on or off.
+One challenge was that the first interrupt version did not respond to the Python script. The wiring and polling version worked, but the interrupt handler was not being triggered. The issue was that the Raspberry Pi 4 uses the GIC-400 interrupt controller, so the earlier legacy interrupt setup was not correct.
+
+The solution was to configure the Raspberry Pi 4 GIC-400 interrupt controller correctly and use the final config.txt setup:
+[all]
+arm_64bit=1
+kernel=kernel8.img
+The following line was removed from config.txt:
+enable_gic=0
+After this correction, the LED turned on when GPIO22 was HIGH and turned off when GPIO22 was LOW. This confirmed that polling was successfully replaced with GPIO interrupt handling.
+
+
+
+5.	Response GPIO Line Setup
+A response GPIO line was added between the bare-metal Raspberry Pi and the Raspberry Pi OS board. The Raspberry Pi OS board sent a signal from GPIO22 to GPIO27 on the bare-metal Pi. When the bare-metal Pi received the signal, it controlled the LED on GPIO18 and sent a response signal back using GPIO23.
+Connections used:
+Raspberry Pi OS GPIO22 / pin 15 -> 560-ohm resistor -> Bare-metal Pi GPIO27 / pin 13
+Raspberry Pi OS GND / pin 6     -> Bare-metal Pi GND / pin 6
+Bare-metal Pi GPIO18 / pin 12   -> resistor -> LED -> GND
+Bare-metal Pi GPIO23 / pin 16   -> 560-ohm resistor -> Raspberry Pi OS GPIO24 / pin 18
+When GPIO22 was HIGH, the LED turned on and GPIO24 received HIGH. When GPIO22 was LOW, the LED turned off and GPIO24 received LOW. This confirmed that the bare-metal Pi could receive an external signal, react to it, and send a response signal back.
+Response Latency Measurement
+The response latency test measured how fast the bare-metal Raspberry Pi responded to a GPIO signal from the Raspberry Pi OS board.
+The Raspberry Pi OS board sent a HIGH/LOW signal from GPIO22 to GPIO27 on the bare-metal Pi. The bare-metal Pi used an interrupt to detect the change, updated the LED on GPIO18, and sent a response signal back using GPIO23. The Raspberry Pi OS board read this response on GPIO24.
+
+A Python script called measure_latency.py was used to send the signal and measure the time until the response was received. The latency values were measured in nanoseconds using Python's perf_counter_ns().
+
+The measurement process was:
+The Python script changed GPIO22.
+The script immediately started checking GPIO24.
+The bare-metal Pi received the signal on GPIO27.
+The bare-metal Pi responded by updating GPIO18 and GPIO23.
+The Raspberry Pi OS board detected the response on GPIO24.
+The script calculated the time difference.
+
+
+These measurements are approximate because Python and Raspberry Pi OS are not real-time systems. The measured values include Python execution time, gpiozero overhead, Linux scheduling delays, and GPIO library delays. However, the results are still useful for comparing the different designs.
+
+
+
+
+
+6.	Interrupt Latency Results
+
+This showed that the bare-metal interrupt version responded very quickly. The HIGH and LOW latency values were close, but not exactly equal because the measurement was taken using Python on Raspberry Pi OS.
+
+
+
+7.	Polling  Response
+The polling version continuously checked GPIO27 in a loop. When GPIO27 read HIGH, the OS turned the LED on through GPIO18 and sent a HIGH response through GPIO23. When GPIO27 read LOW, the OS turned the LED off and sent a LOW response.
+
+Polling test results:
+	
+ 
+
+8.	More Reliable Polling vs Interrupt Comparison
+
+
+
+
+The polling version had a final average latency of about 48.9 microseconds, while the interrupt-driven version had a final average latency of about 35.8 microseconds. This means the interrupt version was faster by about 13.1 microseconds.
+9.	Interrupt Plus Task Queue
+The interrupt plus task queue design was tested next. In this version, GPIO27 triggered an interrupt when the Raspberry Pi OS board sent a HIGH or LOW signal from GPIO22. The interrupt handler did not directly update the LED. Instead, it recorded the event as a small task, and the main loop processed that task to update GPIO18 and GPIO23.
+ 
+average latency was about 35,028.13 ns, which is about 35.0 microseconds or 0.035 ms. This confirmed that the interrupt plus task queue design worked correctly and responded quickly while keeping the interrupt handler short.
+10.	Simple Scheduler
+A simple scheduler was then implemented in the bare-metal Raspberry Pi OS. GPIO27 still triggered an interrupt when the Raspberry Pi OS board sent a HIGH or LOW signal from GPIO22. The interrupt handler did not directly control the LED. Instead, it marked a GPIO task as ready, and the scheduler ran that task to update GPIO18 for the LED and GPIO23 for the response signal.
+ 
+
+11.	Static Cyclic Executive
+A static cyclic executive design was also tested. In this version, the bare-metal Raspberry Pi OS did not use GPIO interrupts. Instead, it ran a fixed repeating cycle:
+i.	Sample GPIO27 input.
+ii.	Update GPIO18 LED and GPIO23 response output.
+iii.	Wait for a short fixed delay.
+iv.	Repeat.
+The static cyclic executive was tested three times using the same wiring and Python 
+The final average latency was about 58,013.03 ns, which is about 58.0 microseconds or 0.058 ms.
+This version responded correctly, but it was slower and more variable than the interrupt-based versions. This is because the cyclic executive only checks GPIO27 at a fixed point in the cycle. If GPIO22 changes just after the input sampling step, the OS must wait until the next cycle before responding.
+
+12.	Interrupt + Task Queue + Scheduler
+
+The selected scalable OS design was interrupt plus task queue plus scheduler. In this version, GPIO27 triggered an interrupt when the Raspberry Pi OS board sent a HIGH or LOW signal from GPIO22. The interrupt handler recorded the event and marked a task as ready. The scheduler then ran the GPIO task, which updated GPIO18 for the LED and GPIO23 for the response signal.
+
+The final average latency was about 39,143.77 ns, which is about 39.1 microseconds or 0.039 ms.
+This result confirmed that the selected design worked successfully. It is more organized and expandable than a direct interrupt-only design because the interrupt handler stays short while the scheduler is responsible for running the actual GPIO task. This structure can later support more tasks, such as sensors, motors, safety checks, or communication handling.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+13.	Raspberry Pi OS Receiver Baseline
+The custom bare-metal OS was compared against a normal Raspberry Pi OS receiver. For this test, the receiver Pi was booted into Raspberry Pi OS instead of the bare-metal kernel. A Python script on the receiver Pi read GPIO27, controlled the LED on GPIO18, and sent a response signal back through GPIO23.
+
+The Raspberry Pi OS receiver used the Python file receiver_pi_os.py. This file used DigitalInputDevice to read the incoming signal on GPIO27, DigitalOutputDevice to control the LED on GPIO18, and another DigitalOutputDevice to send the response signal back through GPIO23. In the report, I refer to this file as the Raspberry Pi OS receiver script because it represents the comparison case where the receiver is running a normal Linux-based operating system instead of the custom bare-metal OS
+
+The final average latency was about 1,047,703.58 ns, which is about 1.048 ms.
+Compared to the selected bare-metal design, which had a final average latency of about 39,143.77 ns, the Raspberry Pi OS receiver was much slower in this test. The Raspberry Pi OS receiver was about 26.8 times slower.
+This difference is expected because Raspberry Pi OS is a full general-purpose operating system. The measurement includes Python, gpiozero callbacks, Linux scheduling, and operating system overhead. In contrast, the bare-metal OS runs directly on the hardware with only the minimal code needed to respond to GPIO changes.
+
+14.	Final Comparison
+
+The results show that the bare-metal designs responded much faster than the Raspberry Pi OS receiver. The Raspberry Pi OS receiver had an average latency of about 1.048 ms, while the selected bare-metal design averaged about 39,143.77 ns, or 0.039 ms.
+The fastest design was the interrupt plus task queue version, with an average latency of about 35,028.13 ns. However, the best design for future development is the interrupt plus task queue plus scheduler design. It was not the absolute fastest, but it was still very fast and more expandable. This design keeps the interrupt handler short, stores events as tasks, and allows the scheduler to manage work in a more organized way.
+
+15.	Measurement Limitations
+
+The latency measurements in this project were taken using Python on Raspberry Pi OS. This method was useful because it allowed the response time to be tested using only the two Raspberry Pi boards, without needing extra equipment such as an oscilloscope or logic analyzer.
+However, this method has a limitation. The measured values include more than just the bare-metal OS response time. They also include Python execution time, gpiozero overhead, Linux scheduling delays, and GPIO library delays. Because of this, the latency values are approximate and may change between runs.
+A more accurate method would be to use a logic analyzer or oscilloscope. The analyzer would connect to the stimulus line GPIO22 and the response line GPIO23 and measure the electrical delay directly between the input signal and the output response. This would give a more accurate hardware-level latency measurement.
+
+Since this equipment was not available, the software-based Python measurement method was used. This was practical and still useful for comparing the different OS designs, but the results should be understood as estimated latency rather than exact hardware latency
+
+16.	Conclusion
+This project successfully built a bare-metal Raspberry Pi OS that can respond to external GPIO signals from another Raspberry Pi running Raspberry Pi OS. The system started with a simple blinking LED and developed into a controllable two-Pi setup where GPIO22 from the stimulus Pi controlled GPIO27 on the bare-metal Pi.
+Several OS designs were tested, including polling, direct interrupts, interrupt plus task queue, a simple scheduler, a static cyclic executive, interrupt plus task queue plus scheduler, and a Raspberry Pi OS receiver baseline.
+The results showed that the bare-metal designs responded much faster than Raspberry Pi OS. The selected interrupt plus task queue plus scheduler design provided a good balance between speed and future expandability. It kept the interrupt handler short, allowed events to be queued, and made it possible for the scheduler to manage future tasks.
+Overall, the project demonstrated that a minimal bare-metal OS can interact with hardware quickly and reliably. It also showed that OS structure matters: direct interrupts can be fast, but task queues and schedulers make the system easier to expand for future embedded real-time applications.
+
+

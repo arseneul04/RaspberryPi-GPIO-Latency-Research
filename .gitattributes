@@ -1,0 +1,7 @@
+*.sh text eol=lf
+*.py text eol=lf
+/data/**/*.csv -text
+/data/*.csv -text
+/analysis_tables/*.csv -text
+/report/development-notes.txt -text
+/analysis/original/* -text

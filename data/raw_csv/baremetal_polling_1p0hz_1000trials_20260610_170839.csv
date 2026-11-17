@@ -1,0 +1,17 @@
+trial,receiver,rate_hz,success,latency_ns,latency_us,note
+1,baremetal_polling,1.0,0,,,missed rising response
+2,baremetal_polling,1.0,0,,,missed rising response
+3,baremetal_polling,1.0,0,,,missed rising response
+4,baremetal_polling,1.0,0,,,missed rising response
+5,baremetal_polling,1.0,0,,,missed rising response
+6,baremetal_polling,1.0,0,,,missed rising response
+7,baremetal_polling,1.0,0,,,missed rising response
+8,baremetal_polling,1.0,0,,,missed rising response
+9,baremetal_polling,1.0,0,,,missed rising response
+10,baremetal_polling,1.0,0,,,missed rising response
+11,baremetal_polling,1.0,0,,,missed rising response
+12,baremetal_polling,1.0,0,,,missed rising response
+13,baremetal_polling,1.0,0,,,missed rising response
+14,baremetal_polling,1.0,0,,,missed rising response
+15,baremetal_polling,1.0,0,,,missed rising response
+16,baremetal_polling,1.0,0,,,missed rising response

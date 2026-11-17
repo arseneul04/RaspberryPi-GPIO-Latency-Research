@@ -1,0 +1,7 @@
+trial,receiver,rate_hz,success,latency_ns,latency_us,note
+1,baremetal_multicore,1.0,0,,,missed rising response
+2,baremetal_multicore,1.0,0,,,missed rising response
+3,baremetal_multicore,1.0,0,,,missed rising response
+4,baremetal_multicore,1.0,0,,,missed rising response
+5,baremetal_multicore,1.0,0,,,missed rising response
+6,baremetal_multicore,1.0,0,,,missed rising response

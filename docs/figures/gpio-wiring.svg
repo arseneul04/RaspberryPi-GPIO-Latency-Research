@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="370" viewBox="0 0 1000 370" role="img" aria-labelledby="title description">
+  <title id="title">GPIO wiring for the two-board latency experiment</title>
+  <desc id="description">Pi A GPIO22 sends a stimulus to Pi B GPIO27. Pi B GPIO23 returns a response to Pi A GPIO24. The boards share a ground. All GPIO labels use Broadcom numbering.</desc>
+  <defs>
+    <marker id="green-arrow" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="9" markerHeight="9" orient="auto"><path d="M1 1 L11 6 L1 11 Z" fill="#0b7057"/></marker>
+    <marker id="blue-arrow" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="9" markerHeight="9" orient="auto"><path d="M1 1 L11 6 L1 11 Z" fill="#225a9c"/></marker>
+  </defs>
+  <rect width="1000" height="370" rx="16" fill="#f4f7f5"/>
+  <g font-family="DejaVu Sans, Arial, sans-serif">
+    <text x="36" y="44" font-size="26" font-weight="bold" fill="#163b32">The GPIO timing loop</text>
+    <text x="965" y="43" text-anchor="end" font-size="17" fill="#40554f">BCM pin numbering</text>
+    <g fill="#ffffff" stroke="#92a99f" stroke-width="1.5"><rect x="36" y="69" width="292" height="268" rx="12"/><rect x="672" y="69" width="292" height="268" rx="12"/></g>
+    <g font-size="24" fill="#193e34" font-weight="bold"><text x="59" y="111">Pi A · Stimulus</text><text x="695" y="111">Pi B · Receiver</text></g>
+    <g font-size="16" fill="#465c52"><text x="59" y="139">Raspberry Pi OS timer</text><text x="695" y="139">Linux or bare-metal code</text></g>
+    <g fill="none" stroke-width="1.5" stroke="#d9e3de"><path d="M58 154 H305 M694 154 H942"/></g>
+    <g font-family="DejaVu Sans Mono, monospace" font-size="21" font-weight="bold">
+      <g fill="#0b7057"><text x="59" y="198">GPIO22</text><text x="695" y="198">GPIO27</text></g>
+      <g fill="#225a9c"><text x="59" y="260">GPIO24</text><text x="695" y="260">GPIO23</text></g>
+      <g fill="#4a5852"><text x="59" y="314">GND</text><text x="695" y="314">GND</text></g>
+    </g>
+    <g text-anchor="end" font-size="16" fill="#465c52"><text x="302" y="196">output</text><text x="302" y="258">input</text><text x="940" y="196">input</text><text x="940" y="258">output</text></g>
+    <g text-anchor="middle" font-size="18" font-weight="bold">
+      <text x="500" y="181" fill="#0b7057">Stimulus edge</text><text x="500" y="243" fill="#225a9c">Response edge</text><text x="500" y="296" fill="#4a5852" font-size="16">Shared ground</text>
+    </g>
+    <g fill="none"><path d="M328 194 H668" stroke="#0b7057" stroke-width="3" marker-end="url(#green-arrow)"/><path d="M672 256 H332" stroke="#225a9c" stroke-width="3" marker-end="url(#blue-arrow)"/><path d="M328 310 H672" stroke="#758780" stroke-width="2" stroke-dasharray="6 6"/></g>
+  </g>
+</svg>
